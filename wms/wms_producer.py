@@ -13,7 +13,6 @@ DB_CONFIG = {
     "autocommit": True
 }
 
-
 def enviar_pedido(pedido_id):
     """Envía un pedido al ERP. Si falla o se demora >0.9 s, lo guarda en la cola local."""
     inicio = time.time()
@@ -28,26 +27,26 @@ def enviar_pedido(pedido_id):
             print(f"[ERROR] ERP devolvió estado {r.status_code}, encolando pedido {pedido_id}.")
             guardar_en_cola(pedido_id)
 
-    except Exception as e:
+    except Exception:
         duracion = time.time() - inicio
         print(f"[FALLO] ERP no respondió en 0.9 s ({round(duracion,3)} s). Encolando pedido {pedido_id}...")
         guardar_en_cola(pedido_id)
 
-
 def guardar_en_cola(pedido_id):
     """Guarda un pedido en la base de datos (cola_local) cuando el ERP no responde."""
     try:
-        with pymysql.connect(**DB_CONFIG) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "INSERT INTO cola_local (pedido_id, estado) VALUES (%s, %s)",
-                    (pedido_id, 'pendiente')
-                )
-                connection.commit()
-                print(f"[QUEUE] Pedido {pedido_id} guardado en cola_local correctamente.")
+        db = pymysql.connect(**DB_CONFIG)
+        cursor = db.cursor()
+        cursor.execute(
+            "INSERT INTO cola_local (pedido_id, estado) VALUES (%s, %s)",
+            (pedido_id, 'pendiente')
+        )
+        db.commit()
+        cursor.close()
+        db.close()
+        print(f"[QUEUE] Pedido {pedido_id} guardado en cola_local correctamente.")
     except Exception as e:
         print(f"[DB ERROR] No se pudo guardar el pedido {pedido_id}: {e}")
-
 
 if __name__ == "__main__":
     print("=== WMS Producer iniciado ===")
