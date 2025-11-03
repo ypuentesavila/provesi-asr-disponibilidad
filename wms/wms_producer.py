@@ -10,10 +10,12 @@ DB_CONFIG = {
     "password": "admin1234...",
     "database": "wms-db",
     "connect_timeout": 5,
-    "ssl": {"ssl": False}  # fuerza sin SSL
+    "autocommit": True
 }
 
+
 def enviar_pedido(pedido_id):
+    """Envía un pedido al ERP. Si falla o se demora >0.9 s, lo guarda en la cola local."""
     inicio = time.time()
     try:
         r = requests.get(ERP_URL, timeout=0.9)
@@ -23,7 +25,7 @@ def enviar_pedido(pedido_id):
         if r.status_code == 200:
             print(f"[WMS] Pedido {pedido_id} procesado correctamente en el ERP.")
         else:
-            print(f"[ERROR] ERP devolvió {r.status_code}. Encolando pedido {pedido_id}.")
+            print(f"[ERROR] ERP devolvió estado {r.status_code}, encolando pedido {pedido_id}.")
             guardar_en_cola(pedido_id)
 
     except Exception as e:
@@ -33,16 +35,16 @@ def enviar_pedido(pedido_id):
 
 
 def guardar_en_cola(pedido_id):
+    """Guarda un pedido en la base de datos (cola_local) cuando el ERP no responde."""
     try:
-        db = pymysql.connect(**DB_CONFIG)
-        cursor = db.cursor()
-        cursor.execute(
-            "INSERT INTO cola_local (pedido_id, estado) VALUES (%s, %s)",
-            (pedido_id, 'pendiente')
-        )
-        db.commit()
-        db.close()
-        print(f"[QUEUE] Pedido {pedido_id} guardado en cola_local correctamente.")
+        with pymysql.connect(**DB_CONFIG) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "INSERT INTO cola_local (pedido_id, estado) VALUES (%s, %s)",
+                    (pedido_id, 'pendiente')
+                )
+                connection.commit()
+                print(f"[QUEUE] Pedido {pedido_id} guardado en cola_local correctamente.")
     except Exception as e:
         print(f"[DB ERROR] No se pudo guardar el pedido {pedido_id}: {e}")
 
@@ -51,6 +53,6 @@ if __name__ == "__main__":
     print("=== WMS Producer iniciado ===")
     print("Enviando pedidos al ERP cada 3 segundos...\n")
     while True:
-        pedido_id = int(time.time())
+        pedido_id = int(time.time()) 
         enviar_pedido(pedido_id)
         time.sleep(3)
