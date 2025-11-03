@@ -5,10 +5,10 @@ app = Flask(__name__)
 
 @app.route("/sync")
 def sync():
-    falla = random.choice([True, False, False])  # 1/3 veces falla
+    falla = random.choice([True, False, False]) 
     if falla:
         print("[ERP] Simulando falla o demora...")
-        time.sleep(2)  # más de 0.9 s
+        time.sleep(2)  
         return jsonify({"status": "error", "msg": "ERP no disponible"}), 500
     else:
         print("[ERP] Procesó pedido correctamente.")
