@@ -1,6 +1,6 @@
 import time
 import requests
-import mysql.connector
+import pymysql
 
 ERP_URL = "http://54.226.55.197:5000/sync"
 
@@ -8,16 +8,21 @@ DB_CONFIG = {
     "host": "wms-db.cn2k0uwymh6v.us-east-1.rds.amazonaws.com",
     "user": "admin",
     "password": "admin1234...",
-    "database": "wms-db"
+    "database": "wms-db",
+    "connect_timeout": 5
 }
 
 def procesar_cola():
     try:
-        db = mysql.connector.connect(**DB_CONFIG)
-        cursor = db.cursor(dictionary=True)
+        db = pymysql.connect(**DB_CONFIG)
+        cursor = db.cursor(pymysql.cursors.DictCursor)
 
         cursor.execute("SELECT * FROM cola_local WHERE estado='pendiente'")
         pedidos = cursor.fetchall()
+
+        if not pedidos:
+            print("[WORKER] No hay pedidos pendientes.")
+            return
 
         for pedido in pedidos:
             try:
@@ -28,16 +33,19 @@ def procesar_cola():
                     print(f"[WORKER] Pedido {pedido['id']} reenviado con éxito.")
                 else:
                     print(f"[WORKER] ERP respondió error para pedido {pedido['id']}.")
-            except Exception as e:
+            except Exception:
                 print(f"[WORKER] ERP sigue caído, reintentará más tarde.")
-    except mysql.connector.Error as err:
-        print(f"[ERROR] Fallo de conexión a la base de datos: {err}")
+    except Exception as e:
+        print(f"[DB ERROR] No se pudo conectar a la base de datos: {e}")
     finally:
-        if 'db' in locals() and db.is_connected():
+        try:
             db.close()
+        except:
+            pass
+
 
 if __name__ == "__main__":
-    print("[WORKER] Iniciando proceso de sincronización...")
+    print("[WORKER] Iniciando proceso de sincronización con ERP...")
     while True:
         procesar_cola()
         time.sleep(5)
