@@ -1,0 +1,9 @@
+CREATE DATABASE IF NOT EXISTS wms;
+USE wms;
+
+CREATE TABLE cola_local (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    pedido_id VARCHAR(50),
+    estado VARCHAR(20) DEFAULT 'pendiente',
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
