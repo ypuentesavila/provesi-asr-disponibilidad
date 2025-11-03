@@ -7,7 +7,8 @@ DB_CONFIG = {
     "host": "wms-db.cn2k0uwymh6v.us-east-1.rds.amazonaws.com",
     "user": "admin",
     "password": "admin1234...",
-    "database": "wms-db"
+    "database": "wms-db",
+    "ssl_disabled": True 
 }
 
 def enviar_pedido(pedido_id):
